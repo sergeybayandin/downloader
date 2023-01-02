@@ -2,6 +2,7 @@
 
 #include "cli/cli_parse_args.h"
 
+#include <assert.h>
 #include <string.h>
 #include <getopt.h>
 
@@ -19,8 +20,8 @@ static void print_usage(const char *prog)
 
 int cli_parse_args(int argc, char *argv[])
 {
-	if (argc < 1 || argv == NULL)
-		return -1;
+	assert(argc >= 1);
+	assert(argv != NULL);
 
 	const struct option options[] = {
 		{"url",       required_argument, NULL, 0},
@@ -70,6 +71,12 @@ int cli_parse_args(int argc, char *argv[])
 			print_usage(argv[0]);
 			return -1;
 		}
+	}
+
+	if ((pa.url == NULL && !pa.has_show_info) ||
+	    (pa.url == NULL && (pa.login != NULL || pa.password != NULL))) {
+		print_usage(argv[0]);
+		return -1;
 	}
 
 	return 0;

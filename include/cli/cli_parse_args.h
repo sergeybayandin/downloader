@@ -10,7 +10,7 @@ struct cli_parsed_args {
 	int         has_show_info;
 };
 
-extern struct parsed_args pa;
+extern struct cli_parsed_args pa;
 
 int cli_parse_args(int argc, char *argv[]);
 
