@@ -1,7 +1,7 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
-#include "cli/request_data.h"
+#include "request_data.h"
 
 #define REQUEST_TYPE_DOWNLOAD  0
 #define REQUEST_TYPE_SHOW_INFO 1

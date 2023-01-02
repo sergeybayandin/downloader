@@ -1,11 +1,12 @@
 #include "config.h"
 
-#include "cli/create_socket.h"
+#include "daemon/daemon_socket.h"
 
+#include <unistd.h>
 #include <sys/un.h>
 #include <sys/socket.h>
 
-int create_socket(void)
+int daemon_socket(void)
 {
 	struct sockaddr_un addr;
 	socklen_t          addrlen = sizeof(addr);
@@ -18,7 +19,7 @@ int create_socket(void)
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, DAEMON_SOCKETNAME);
 
-	if (connect(fd, (struct sockaddr*)&addr, addrlen) == -1) {
+	if (bind(fd, (struct sockaddr*)&addr, addrlen) == -1) {
 		close(fd);
 		return -1;
 	}
@@ -26,7 +27,9 @@ int create_socket(void)
 	return fd;
 }
 
-int destroy_socket(int fd)
+int daemon_close(int fd)
 {
-	return close(fd);
+	if (close(fd) == -1 || unlink(DAEMON_SOCKETNAME) == -1)
+		return -1;
+	return 0;
 }

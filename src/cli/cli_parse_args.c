@@ -1,11 +1,11 @@
 #include "config.h"
 
-#include "cli/parse_args.h"
+#include "cli/cli_parse_args.h"
 
 #include <string.h>
 #include <getopt.h>
 
-struct parsed_args pa = {
+struct cli_parsed_args pa = {
 	.url           = NULL,
 	.login         = NULL,
 	.password      = NULL,
@@ -17,7 +17,7 @@ static void print_usage(const char *prog)
 	// TODO
 }
 
-int parse_args(int argc, char *argv[])
+int cli_parse_args(int argc, char *argv[])
 {
 	if (argc < 1 || argv == NULL)
 		return -1;
