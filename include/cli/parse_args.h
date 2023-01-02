@@ -12,7 +12,6 @@ struct parsed_args {
 
 extern struct parsed_args pa;
 
-int  parse_args(int argc, char *argv[]);
-void print_usage(const char *prog);
+int parse_args(int argc, char *argv[]);
 
 #endif // PARSE_ARGS_H

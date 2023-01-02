@@ -12,6 +12,11 @@ struct parsed_args pa = {
 	.has_show_info = 0
 };
 
+static void print_usage(const char *prog)
+{
+	// TODO
+}
+
 int parse_args(int argc, char *argv[])
 {
 	if (argc < 1 || argv == NULL)
@@ -68,9 +73,4 @@ int parse_args(int argc, char *argv[])
 	}
 
 	return 0;
-}
-
-void print_usage(const char *prog)
-{
-	// TODO
 }
