@@ -1,5 +1,6 @@
 #include "cli/cli_socket.h"
 
+#include <unistd.h>
 #include <sys/socket.h>
 
 int cli_socket(void)

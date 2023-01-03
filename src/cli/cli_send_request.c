@@ -3,6 +3,7 @@
 
 #include "cli/cli_send_request.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <assert.h>
 

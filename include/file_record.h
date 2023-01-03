@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include <sys/types.h>
+
 struct file_record {
 	char   url[URL_MAXLEN];
 	off_t  size;

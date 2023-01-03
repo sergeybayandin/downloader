@@ -2,6 +2,7 @@
 
 #include "cli/cli_parse_args.h"
 
+#include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include <getopt.h>
