@@ -246,8 +246,6 @@ int daemon_handle_requests(int fd)
 				continue;
 		}
 
-		puts(addr.sun_path);
-
 		if ((ret = newfd = create_connected_socket(&addr)) != -1) {
 			switch (req.type) {
 			case REQUEST_TYPE_DOWNLOAD  :
