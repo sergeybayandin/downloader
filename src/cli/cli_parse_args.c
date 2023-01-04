@@ -38,6 +38,8 @@ int cli_parse_args(int argc, char *argv[])
 
 	while (1) {
 		opt = getopt_long(argc, argv, "", options, NULL);
+		if (opt == -1)
+			break;
 
 		switch (opt) {
 		case 0  :
