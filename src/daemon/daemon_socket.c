@@ -17,7 +17,7 @@ int daemon_socket(void)
 		return -1;
 
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, DAEMON_SOCKETNAME);
+	strncpy(addr.sun_path, DAEMON_SOCKETNAME, sizeof(addr.sun_path) - 1);
 
 	if (bind(fd, (struct sockaddr*)&addr, addrlen) == -1) {
 		close(fd);
