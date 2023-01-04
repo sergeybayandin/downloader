@@ -27,7 +27,7 @@ cli: $(CLI_OBJ)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/cli $(CLI_OBJ)
 
 daemon: $(DAEMON_OBJ)
-	$(CC) $(CFLAGS) -o $(BUILDDIR)/daemon $(DAEMON_OBJ)
+	$(CC) $(CFLAGS) -o $(BUILDDIR)/daemon $(DAEMON_OBJ) -lcurl
 
 $(CLI_OBJDIR)/%.o: $(CLI_SRCDIR)/%.c
 	mkdir -p $(CLI_OBJDIR)
@@ -35,7 +35,7 @@ $(CLI_OBJDIR)/%.o: $(CLI_SRCDIR)/%.c
 
 $(DAEMON_OBJDIR)/%.o: $(DAEMON_SRCDIR)/%.c
 	mkdir -p $(DAEMON_OBJDIR)
-	$(CC) $(CFLAGS) -o $@ -c $< -I$(INCLUDEDIR)
+	$(CC) $(CFLAGS) -o $@ -c $< -I$(INCLUDEDIR) -lcurl
 
 clean:
-	rm -r $(BUILDDIR)
+	rm -rf $(BUILDDIR)
