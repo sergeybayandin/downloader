@@ -46,12 +46,17 @@ static int create_connected_socket(struct sockaddr_un *addr)
 	return fd;
 }
 
+static void set_error_response(struct response *resp, const char *strerror)
+{
+	resp.status = RESPONSE_STATUS_ERR;
+	strncpy(resp.data.strerror, strerror, STRERROR_MAXLEN);
+}
+
 static void sendto_error_response(int fd, struct sockaddr_un *addr, const char *strerror)
 {
 	struct response resp;
 
-	resp.status = RESPONSE_STATUS_ERR;
-	strncpy(resp.data.strerror, strerror, STRERROR_MAXLEN);
+	set_error_response(&resp, strerror);
 
 	sendto(fd, &resp, sizeof(resp), 0, (struct sockaddr*)addr, sizeof(*addr));
 }
@@ -60,8 +65,7 @@ static void send_error_response(int fd, const char *strerror)
 {
 	struct response resp;
 
-	resp.status = RESPONSE_STATUS_ERR;
-	strncpy(resp.data.strerror, strerror, STRERROR_MAXLEN);
+	set_error_response(&resp, strerror);
 
 	send(fd, &resp, sizeof(resp), 0);
 }
@@ -126,6 +130,18 @@ static int create_downloads_directory(const char *path)
 	return 0;
 }
 
+static int set_downloads_path(char *path, int path_size)
+{
+	return snprintf(path, sizeof(path), "%s/%s", getenv("HOME"), "Downloads");
+}
+
+static int set_filename_from_url(char *filename, int filename_size, const char *url)
+{
+	const char *ptr = strrchr(arg->download.url, '/');
+	ptr = (ptr == NULL || ptr[1] == '\0' ? "unnamed" : ptr + 1);
+	return snprintf(filename, filename_size, "/%s", ptr);
+}
+
 static void *download_routine(struct download_routine_arg *arg)
 {
 	CURL     *handle;
@@ -133,22 +149,17 @@ static void *download_routine(struct download_routine_arg *arg)
 
 	struct response resp;
 
-	int  pathlen;
-	char path[PATH_MAX], *filename;
+	int  len;
+	char path[PATH_MAX];
 	
-	pathlen = snprintf(path, sizeof(path), "%s/%s",
-		getenv("HOME"), "Downloads");
-
+	len = set_downloads_path(path, sizeof(path));
 	if (create_downloads_directory(path) == -1) {
 		send_error_response(arg->fd, strerror(errno));
 		goto exit;
 	}
 
-	filename = strrchr(arg->download.url, '/');
-	pathlen += snprintf(path + pathlen, sizeof(path) - pathlen, "/%s",
-		(filename == NULL || filename[1] == '\0' ? "unnamed" : filename + 1));
-
-	if (pathlen >= sizeof(path)) {
+	len += set_filename_from_url(path + len, sizeof(path) - len, arg->download.url);
+	if (len >= sizeof(path)) {
 		send_error_response(arg->fd, "file path too large");
 		goto exit;
 	}
