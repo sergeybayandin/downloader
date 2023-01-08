@@ -9,4 +9,6 @@
 
 #define DAEMON_SOCKETNAME "/tmp/l3tiqmaf9saeolnbivbak15wq59ckvedcbouvzgqtgokgas9cl.socket"
 
+#define USER_HISTORIES_MAXCNT 16
+
 #endif // CONFIG_H

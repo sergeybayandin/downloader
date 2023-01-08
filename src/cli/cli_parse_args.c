@@ -16,7 +16,14 @@ struct cli_parsed_args pa = {
 
 static void print_usage(const char *prog)
 {
-	// TODO
+	fprintf(stderr, "Usage: %s <option> <option>...\n", prog);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Where <option> is any of the following options:\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "    --url       <arg> [url to download file]\n");
+	fprintf(stderr, "    --login     <arg> []\n");
+	fprintf(stderr, "    --password  <arg> []\n");
+	fprintf(stderr, "    --show-info <arg> []\n");
 }
 
 int cli_parse_args(int argc, char *argv[])
@@ -44,7 +51,7 @@ int cli_parse_args(int argc, char *argv[])
 		switch (opt) {
 		case 0  :
 			if (strlen(optarg) >= URL_MAXLEN) {
-				fprintf(stderr, "parse_args: url max length must be less than %d\n", URL_MAXLEN);
+				fprintf(stderr, "cli_parse_args: url max length must be less than %d\n", URL_MAXLEN);
 				return -1;
 			}
 			pa.url = optarg;
@@ -52,7 +59,7 @@ int cli_parse_args(int argc, char *argv[])
 
 		case 1  :
 			if (strlen(optarg) >= LOGIN_MAXLEN) {
-				fprintf(stderr, "parse_args: login max length must be less than %d\n", LOGIN_MAXLEN);
+				fprintf(stderr, "cli_parse_args: login max length must be less than %d\n", LOGIN_MAXLEN);
 				return -1;
 			}
 			pa.login = optarg;
@@ -60,7 +67,7 @@ int cli_parse_args(int argc, char *argv[])
 
 		case 2  :
 			if (strlen(optarg) >= PASSWORD_MAXLEN) {
-				fprintf(stderr, "parse_args: password max length must be less than %d\n", PASSWORD_MAXLEN);
+				fprintf(stderr, "cli_parse_args: password max length must be less than %d\n", PASSWORD_MAXLEN);
 				return -1;
 			}
 			pa.password = optarg;

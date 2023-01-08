@@ -3,6 +3,7 @@
 
 #include "cli/cli_send_request.h"
 
+#include <time.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
@@ -62,6 +63,13 @@ static void set_request_show_info(struct request *req)
 	req->type = REQUEST_TYPE_SHOW_INFO;
 }
 
+static void print_file_record(const struct file_record *record)
+{
+	printf("%s\n",  record->url);
+	printf("%ld\n", record->size);
+	printf("%s\n",  ctime(&record->date));
+}
+
 int cli_send_request_show_info(int fd)
 {
 	struct request  req;
@@ -96,7 +104,7 @@ int cli_send_request_show_info(int fd)
 			break;
 
 		case RESPONSE_STATUS_OK   :
-			/* print here */
+			print_file_record(&resp.data.show_info.record);
 			break;
 		}
 	}

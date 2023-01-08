@@ -8,7 +8,7 @@ struct response_data_download {
 };
 
 struct response_data_show_info {
-	struct file_record file_record;
+	struct file_record record;
 };
 
 #endif // RESPONSE_DATA_H
