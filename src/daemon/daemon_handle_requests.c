@@ -1,7 +1,7 @@
 #include "request.h"
 #include "response.h"
 
-#include "daemon/daemon_user_histories.h"
+#include "daemon/daemon_user_history.h"
 #include "daemon/daemon_handle_requests.h"
 
 #include <errno.h>
@@ -13,7 +13,6 @@
 
 #include <curl/curl.h>
 
-#include <pwd.h>
 #include <unistd.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -23,13 +22,11 @@
 
 struct download_routine_arg {
 	struct request_data_download download;
-	int                          pos;
 	int                          fd;
 };
 
 struct show_info_routine_arg {
 	struct request_data_show_info show_info;
-	int                           pos;
 	int                           fd;
 };
 
@@ -59,18 +56,14 @@ static void set_error_response(struct response *resp, const char *strerror)
 static void sendto_error_response(int fd, struct sockaddr_un *addr, const char *strerror)
 {
 	struct response resp;
-
 	set_error_response(&resp, strerror);
-
 	sendto(fd, &resp, sizeof(resp), 0, (struct sockaddr*)addr, sizeof(*addr));
 }
 
 static void send_error_response(int fd, const char *strerror)
 {
 	struct response resp;
-
 	set_error_response(&resp, strerror);
-
 	send(fd, &resp, sizeof(resp), 0);
 }
 
@@ -134,22 +127,9 @@ static int create_downloads_directory(const char *path)
 	return 0;
 }
 
-static int uid_to_username(uid_t uid, char *username, int path_size)
+static int set_downloads_path(char *path, int path_size)
 {
-	struct passwd *pwd = getpwuid(uid);
-
-	if (pwd == NULL)
-		return -1;
-
-	snprintf(username, path_size, "%s", pwd->pw_name);
-
-	return 0;
-}
-
-static int set_downloads_path(char *path, int path_size, const char *username)
-{
-	const char *fmt = (strcmp(username, "root") == 0 ? "/%s/%s" : "/home/%s/%s");
-	return snprintf(path, path_size, fmt, username, "Downloads");
+	return snprintf(path, path_size, "%s/Downloads", getenv("HOME"));
 }
 
 static int set_filename_from_url(char *filename, int filename_size, const char *url)
@@ -181,14 +161,9 @@ static void *download_routine(struct download_routine_arg *arg)
 	struct file_record record;
 
 	int  len;
-	char path[PATH_MAX], username[NAME_MAX];
-	
-	if (uid_to_username(user_histories.hm[arg->pos]->uid, username, sizeof(username)) == -1) {
-		send_error_response(arg->fd, strerror(errno));
-		goto exit;
-	}
+	char path[PATH_MAX];
 
-	len = set_downloads_path(path, sizeof(path), username);
+	len = set_downloads_path(path, sizeof(path));
 	if (create_downloads_directory(path) == -1) {
 		send_error_response(arg->fd, strerror(errno));
 		goto exit;
@@ -206,19 +181,11 @@ static void *download_routine(struct download_routine_arg *arg)
 		goto exit;
 	}
 
-	if (download_file(handle, path, &arg->download, &code) == -1) {
+	if (download_file(handle, path, &arg->download, &code)   == -1 ||
+	    fill_file_record(&record, path, arg, handle)         == -1 ||
+	    daemon_user_history_push(&record) == -1) {
 		send_error_response(arg->fd,
-			(code != CURLE_OK ? curl_easy_strerror(code) : strerror(errno)));
-		goto curl_cleanup;
-	}
-
-	if (fill_file_record(&record, path, arg, handle) == -1) {
-		send_error_response(arg->fd, strerror(errno));
-		goto curl_cleanup;
-	}
-
-	if (daemon_user_histories_push_record(arg->pos, &record) == -1) {
-		send_error_response(arg->fd, strerror(errno));
+			(errno > 0 ? strerror(errno) : curl_easy_strerror(code)));
 		goto curl_cleanup;
 	}
 
@@ -238,7 +205,7 @@ exit:
 	pthread_exit(NULL);
 }
 
-static int handle_request_download(int fd, int pos, const struct request_data_download *download)
+static int handle_request_download(int fd, const struct request_data_download *download)
 {
 	struct download_routine_arg *arg;
 
@@ -246,7 +213,6 @@ static int handle_request_download(int fd, int pos, const struct request_data_do
 		return -1;
 
 	arg->fd  = fd;
-	arg->pos = pos;
 	memcpy(&arg->download, download, sizeof(*download));
 
 	if (create_detached_thread((void*(*)(void*))download_routine, arg) == -1) {
@@ -259,7 +225,7 @@ static int handle_request_download(int fd, int pos, const struct request_data_do
 
 static void *show_info_routine(struct show_info_routine_arg *arg)
 {
-	struct daemon_user_history_node *node = user_histories.hm[arg->pos]->head;
+	struct daemon_user_history_node *node = user_history.head;
 	struct response                 resp;
 
 	while (node != NULL) {
@@ -286,7 +252,7 @@ static void *show_info_routine(struct show_info_routine_arg *arg)
 	pthread_exit(NULL);
 }
 
-static int handle_request_show_info(int fd, int pos, struct request_data_show_info *show_info)
+static int handle_request_show_info(int fd, struct request_data_show_info *show_info)
 {
 	struct show_info_routine_arg *arg;
 
@@ -294,25 +260,12 @@ static int handle_request_show_info(int fd, int pos, struct request_data_show_in
 		return -1;
 
 	arg->fd  = fd;
-	arg->pos = pos;
 	memcpy(&arg->show_info, show_info, sizeof(*show_info));
 
 	if (create_detached_thread((void*(*)(void*))show_info_routine, arg) == -1) {
 		free(arg);
 		return -1;
 	}
-
-	return 0;
-}
-
-static int get_uid(uid_t *uid, const char *socket_path)
-{
-	struct stat statbuf;
-
-	if (stat(socket_path, &statbuf) == -1)
-		return -1;
-
-	*uid = statbuf.st_uid;
 
 	return 0;
 }
@@ -325,9 +278,7 @@ int daemon_handle_requests(int fd)
 	struct request req;
 
 	ssize_t n;
-	int     ret, newfd, pos;
-
-	uid_t uid;
+	int     ret, newfd;
 
 	while (1) {
 		n = recvfrom(fd, &req, sizeof(req), 0, (struct sockaddr*)&addr, &addrlen);
@@ -338,26 +289,14 @@ int daemon_handle_requests(int fd)
 				continue;
 		}
 
-		if (get_uid(&uid, addr.sun_path) == -1) {
-			sendto_error_response(fd, &addr, strerror(errno));
-			continue;
-		}
-
-		pos = daemon_user_histories_insert_by_uid(uid);
-		if (pos == -1) {
-			sendto_error_response(fd, &addr,
-				(errno > 0 ? strerror(errno) : "user histories storage has no space"));
-			continue;
-		}
-
 		if ((ret = newfd = create_connected_socket(&addr)) != -1) {
 			switch (req.type) {
 			case REQUEST_TYPE_DOWNLOAD  :
-				ret = handle_request_download(newfd, pos, &req.data.download);
+				ret = handle_request_download(newfd, &req.data.download);
 				break;
 
 			case REQUEST_TYPE_SHOW_INFO :
-				ret = handle_request_show_info(newfd, pos, &req.data.show_info);
+				ret = handle_request_show_info(newfd, &req.data.show_info);
 				break;
 
 			default                     :
